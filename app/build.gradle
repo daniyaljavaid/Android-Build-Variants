@@ -1,0 +1,102 @@
+apply plugin: 'com.android.application'
+
+android {
+    //accessing project level attributes
+    def rootProject = rootProject.ext
+    compileSdkVersion rootProject.compileSdkVersion
+
+    buildToolsVersion "30.0.2"
+
+    defaultConfig {
+        applicationId "com.example.buildvariants"
+        minSdkVersion rootProject.minSdkVersion
+        targetSdkVersion rootProject.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        releaseConfig {
+            storeFile file("../certificates/releaseKS.jks")
+            storePassword "dj123456789"
+            keyAlias "release"
+            keyPassword "dj123456789"
+        }
+        debugConfig {
+            storeFile file("../certificates/debugKS.jks")
+            storePassword "dj123456789"
+            keyAlias "debug"
+            keyPassword "dj123456789"
+
+        }
+        uatConfig {
+            storeFile file("../certificates/uatKS.jks")
+            storePassword "dj123456789"
+            keyAlias "uat"
+            keyPassword "dj123456789"
+
+        }
+    }
+    // by default, android has 2 variants (debug & release). Release variant always requires to have signing configuration
+    // When creating a new variant, signing configuration is required.
+    // In debug version you don't need to specify signingConfig, it automatically takes debug certificate details
+    buildTypes {
+        release {
+//            applicationIdSuffix ".release"
+            minifyEnabled false
+            debuggable false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            //declaring a string, that can be accessed in java/kotlin using BuildConfig.API_BASE_URL
+            buildConfigField "String", "API_BASE_URL", "\"https://releaseURL.com\""
+            //if a res is defined here, it should not be in that res xml. eg app_name should be removed from strings.xml
+            //else it gives duplicate error
+            resValue "string", "app_name", "BuildVariants Release"
+            // required to make signed apk in case of release/non-debug apps
+            signingConfig signingConfigs.releaseConfig
+
+        }
+        debug {
+//            applicationIdSuffix ".debug"
+            minifyEnabled false
+            debuggable true
+            buildConfigField "String", "API_BASE_URL", "\"https://debugURL.com\""
+            resValue "string", "app_name", "BuildVariants Debug"
+
+        }
+        uat {
+//            applicationIdSuffix ".uat"
+            minifyEnabled false
+            debuggable true
+            buildConfigField "String", "API_BASE_URL", "\"https://uatURL.com\""
+            resValue "string", "app_name", "BuildVariants UAT"
+            signingConfig signingConfigs.uatConfig
+
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.0.2'
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.2'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
+
+}
+/*
+1.  BuildConfig.java is generated automatically by Android build tools, and is placed into the gen folder.
+2.  When minifyEnable = true, there is no BuildConfig file found in apk.
+    An additional feature of the minifying step is the inlining of constants.
+    This would explain why the BuildConfig disappears, and yet the values still exist where needed.
+    Once the values get inlined, there are no more references to the BuildConfig class and the minifier can remove it entirely.
+3.  Place different google-services.json in variant's package to use them accordingly.
+    https://developer.android.com/studio/build/application-id
+    https://stackoverflow.com/questions/27905934/why-are-build-types-distinct-from-product-flavors
+4.  Use applicationIdSuffix if we want to have variants installed as a different application on same device
+5.  Resources/classes defined in variants override the resource defined in main app with same name.
+6.  If a resource/class is not defined in main app, dependency is resolved from selected variant.
+
+*/
